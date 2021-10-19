@@ -2,16 +2,22 @@ const colors = require('colors');
 
 let start = +process.argv[2];
 let end = +process.argv[3];
+
+// валидируем значения
 if (!Number.isInteger(start) || !Number.isInteger(end)) {
     console.error(new Error('Не верный ввод. Введите два целых числа.'));
     return
 }
 
+// start должен быть больше end
 if (start > end) {
     [start, end] = [end, start];
 }
 
+// находим простые числа в заданном диапазоне
 let arr = simpleNumbers(start, end);
+
+// форматируем строку
 let str = '';
 arr.forEach((item,idx) => {
     if ((idx + 1) % 3 === 0) {
@@ -23,6 +29,7 @@ arr.forEach((item,idx) => {
     }
     str += ' ';
 })
+
 if (str.length > 0) {
     console.log(str);
 } else {
