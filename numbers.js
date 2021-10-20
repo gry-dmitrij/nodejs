@@ -33,7 +33,7 @@ arr.forEach((item,idx) => {
 if (str.length > 0) {
     console.log(str);
 } else {
-    console.log('В этом диапазоне нет простых чисел');
+    console.log('В этом диапазоне нет простых чисел'.red);
 }
 
 
