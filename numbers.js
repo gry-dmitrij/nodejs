@@ -46,7 +46,7 @@ if (str.length > 0) {
 function simpleNumbers(start, end) {
     const arr = [];
     for (let i = start; i <= end; i++) {
-        let flag = true;
+        let flag = i > 1;
         for (let j = 2; j * j <= i && i > 2; j++) {
             if (i % j === 0) {
                 flag = false;
