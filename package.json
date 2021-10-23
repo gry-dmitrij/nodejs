@@ -8,6 +8,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "colors": "^1.4.0"
+    "colors": "^1.4.0",
+    "luxon": "^2.0.2",
+    "node-notifier": "^10.0.0"
   }
 }
