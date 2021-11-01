@@ -1,88 +1,133 @@
 #!/usr/local/bin/node
 const fs = require('fs');
 const path = require('path');
-// const readline = require('readline');
-// const yargs = require('yargs');
+const readline = require('readline');
+const yargs = require('yargs');
 const inquirer = require('inquirer');
 
-// const LOG_FILE = './access.log';
+/**
+ * -p, --path, --dir - необязательный параметр, определяет путь начальной директории
+ */
+const options = yargs
+    .usage('Usage: -p <path to the directory>')
+    .option('p', {
+        alias: ['path', 'dir'],
+        describe: 'Path to the directory',
+        type: 'string',
+        demandOption: false,
+        default: ''
+    })
+    .argv;
 
-// console.log(process.argv);
-// fs.readFile(LOG_FILE, 'utf-8', (err, data) => {
-//     if (err) console.log(err);
-//     else console.log(data);
-// });
-// fs.readFile(process.argv[2], 'utf-8', (err, data) => {
-//     if (err) console.log(err);
-//     else console.log(data);
-// });
+const executionDir = path.resolve(process.cwd(), options.p);
 
-// const options = yargs
-//     .usage('Usage: -p <path to the file>')
-//     .option('p', {
-//         alias: 'path',
-//         // alias: ['path', 'path2']
-//         describe: 'Path to the file',
-//         type: 'string',
-//         demandOption: true,
-//     }).argv;
-//
-// console.log(options);
+choose(executionDir);
 
-// fs.readFile(options.p, 'utf-8', (err, data) => {
-//     if (err) console.log(err);
-//     else console.log(data);
-// });
-
-// const rl = readline.createInterface({
-//     input: process.stdin,
-//     output: process.stdout,
-// });
-
-// rl.question('Please enter the path to the file: ', (filePath) => {
-//     console.log('path:', filePath);
-//     // rl.close();
-//     rl.question('Please enter the encoding: ', (encoding) => {
-//         console.log('encoding:', encoding);
-//         rl.close();
-//     });
-// });
-
-// const question = async (question) => new Promise(resolve => rl.question(question, resolve));
-//
-// (async () => {
-//     const filePath = await question('Please enter the path to the file: ');
-//     // const fullPath = path.join(__dirname, filePath);
-//     const fullPath = path.resolve(__dirname, filePath);
-//     console.log(fullPath);
-//     const encoding = await question('Please enter the encoding: ');
-//
-//     // const data = fs.readFileSync(filePath, encoding);
-//     // console.log(data);
-//     // rl.close();
-//
-//     fs.readFile(fullPath, encoding, (err, data) => {
-//         console.log(data);
-//         rl.close();
-//     });
-// })()
-const executionDir = process.cwd();
-const isFile = (fileName) => fs.lstatSync(fileName).isFile();
-const list = fs.readdirSync('./').filter(isFile);
-
-inquirer.prompt([
-    {
-        name: 'fileName',
-        type: 'list', // input, number, confirm, list, checkbox, password
-        message: 'Choose a file to read',
-        choices: list,
-    },
-])
-    .then(({ fileName }) => {
-        const fullPath = path.join(executionDir, fileName);
-
-        fs.readFile(fullPath, 'utf-8', (err, data) => {
-            if (err) console.log(err);
-            else console.log(data);
+/**
+ * выбор файла
+ * @param dir {String} - директория
+ */
+function choose(dir) {
+    const list = fs.readdirSync(dir);
+    const rootDir = path.resolve(dir, '../');
+    if (rootDir !== dir) {
+        list.unshift('..');
+    }
+    inquirer.prompt([
+        {
+            name: 'fileName',
+            type: 'list', // input, number, confirm, list, checkbox, password
+            message: 'Выберите файл',
+            choices: list,
+            loop: false,
+        },
+    ])
+        .then(({fileName}) => {
+            const fullPath = path.join(dir, fileName);
+            // если выбрана директория, заходим в нее
+            if (fs.lstatSync(fullPath).isDirectory()) {
+                choose(path.join(dir, fileName));
+            } else {
+                useTemplate(fullPath);
+            }
         });
+}
+
+/**
+ * Читает файл и выводит в консоль
+ * @param path {String} - путь к файлу
+ */
+function readFile(path) {
+    fs.readFile(path, 'utf-8', (err, data) => {
+        if (err) console.log(err);
+        else console.log(data);
     });
+}
+
+/**
+ * Спрашиваем пользователя, будем ли использовать шаблон для поиска строки в файле
+ * @param path {String} - путь к файлу
+ */
+function useTemplate(path) {
+    inquirer.prompt([
+        {
+            name: 'uTemplate',
+            type: 'confirm', // input, number, confirm, list, checkbox, password
+            message: 'Хотите задать шаблон для поиска?',
+        },
+    ])
+        .then(({ uTemplate }) => {
+            if (uTemplate) {
+                setTemplate(path)
+            } else {
+                readFile(path)
+            }
+        })
+}
+
+/**
+ * Задает шаблон для поиска строки в файле
+ * @param path {String} - путь к файлу
+ */
+function setTemplate(path) {
+    inquirer.prompt([
+        {
+            name: 'template',
+            type: 'input', // input, number, confirm, list, checkbox, password
+            message: 'Задайте шаблон: ',
+        },
+    ])
+        .then( ({ template }) => {
+            readTemplateFile(path, template)
+        })
+}
+
+/**
+ * Читает строки из файла по шаблону
+ * @param path {String} - путь к файлу
+ * @param template {String} - шаблон для поиска
+ */
+function readTemplateFile(path, template) {
+    const readStream = fs.createReadStream(path, {
+        encoding: 'utf-8'
+    });
+    const lineReader = readline.createInterface({
+        input: readStream,
+    })
+    const reg = new RegExp(template, 'ig');
+    let searched = false;
+    lineReader.on('line', (input) => {
+        if (reg.test(input)) {
+            searched = true;
+            console.log(input);
+        }
+    });
+    lineReader.on('close', () => {
+        if (!searched) {
+            console.log('Ничего не найдено');
+        }
+    });
+    readStream.on('error', err => {
+        console.log(err);
+    });
+}
