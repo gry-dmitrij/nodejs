@@ -11,5 +11,8 @@
     "colors": "^1.4.0",
     "luxon": "^2.0.2",
     "node-notifier": "^10.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.14"
   }
 }
